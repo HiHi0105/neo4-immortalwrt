@@ -59,6 +59,7 @@ jobs:
 
     - name: Load custom feeds
       run: |
+        [ -f openwrt/feeds.conf.default ] && cp openwrt/feeds.conf.default openwrt/feeds.conf.bak
         cp -f $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
        
@@ -130,7 +131,8 @@ jobs:
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
         echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
-        touch release.txt
+        echo "OpenWrt build completed successfully." > release.txt
+        echo "Build time: $(date)" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release

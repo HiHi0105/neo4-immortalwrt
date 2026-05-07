@@ -1,20 +1,24 @@
 #!/bin/bash
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-# File name: diy-part2.sh
-# Description: OpenWrt DIY script part 2 (After Update feeds)
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 
-# Modify default IP
-#sed -i 's/192.168.1.1/192.168.50.5/g' package/base-files/files/bin/config_generate
+# 默认IP
+sed -i 's/192.168.1.1/192.168.9.2/g' package/base-files/files/bin/config_generate
 
-# Modify default theme
-#sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
+# 默认中文
+sed -i "s/UTC/CST-8/g" package/base-files/files/bin/config_generate
 
-# Modify hostname
-#sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+# 关闭DHCP
+cat >> package/base-files/files/etc/uci-defaults/99-disable-dhcp << 'EOF'
+#!/bin/sh
+uci set dhcp.lan.ignore='1'
+uci commit dhcp
+EOF
+
+# 关闭WiFi
+cat >> package/base-files/files/etc/uci-defaults/99-disable-wifi << 'EOF'
+#!/bin/sh
+uci set wireless.@wifi-device[0].disabled='1'
+uci commit wireless
+EOF
+
+chmod +x package/base-files/files/etc/uci-defaults/99-disable-dhcp
+chmod +x package/base-files/files/etc/uci-defaults/99-disable-wifi

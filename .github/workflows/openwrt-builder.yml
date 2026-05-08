@@ -130,26 +130,27 @@ jobs:
         name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: openwrt/bin
 
-    - name: Organize files
+        - name: Organize files
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
-        if [ -d "openwrt/bin/targets" ]; then
-          cd openwrt/bin/targets/*/* || exit 0
+        if ls openwrt/bin/targets/*/* 1> /dev/null 2>&1; then
+          cd openwrt/bin/targets/*/*
           rm -rf packages
           echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "status=success" >> $GITHUB_OUTPUT
         else
-          echo "No firmware generated, skip organize"
+          echo "No firmware generated"
           echo "FIRMWARE=" >> $GITHUB_ENV
+          echo "status=skip" >> $GITHUB_OUTPUT
         fi
-        echo "status=success" >> $GITHUB_OUTPUT
 
-    - name: Upload firmware directory
+        - name: Upload firmware directory
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
+      if: steps.organize.outputs.status == 'success' && env.FIRMWARE != '' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE || '' }}
+        path: ${{ env.FIRMWARE }}
 
     - name: Generate release tag
       id: tag

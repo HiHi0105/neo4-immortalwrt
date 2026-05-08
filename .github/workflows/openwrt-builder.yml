@@ -4,11 +4,6 @@
 # File: .github/workflows/openwrt-builder.yml
 # Description: Build OpenWrt using GitHub Actions
 #
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 
 name: OpenWrt Builder
 
@@ -62,35 +57,48 @@ jobs:
 
     - name: Load custom feeds
       run: |
-        # 备份默认 feeds.conf.default
-        if [ -f $GITHUB_WORKSPACE/openwrt/feeds.conf.default ]; then
-          cp $GITHUB_WORKSPACE/openwrt/feeds.conf.default $GITHUB_WORKSPACE/openwrt/feeds.conf.bak
+        # 备份默认 feeds.conf.default，如果存在
+        if [ -f "$GITHUB_WORKSPACE/openwrt/feeds.conf.default" ]; then
+          cp "$GITHUB_WORKSPACE/openwrt/feeds.conf.default" "$GITHUB_WORKSPACE/openwrt/feeds.conf.bak"
         else
           echo "feeds.conf.default not found, skip backup"
         fi
 
-        # 复制自定义 feeds
-        if [ -f $GITHUB_WORKSPACE/$FEEDS_CONF ]; then
-          cp -f $GITHUB_WORKSPACE/$FEEDS_CONF $GITHUB_WORKSPACE/openwrt/feeds.conf.default
+        # 复制自定义 feeds，如果存在
+        if [ -f "$GITHUB_WORKSPACE/$FEEDS_CONF" ]; then
+          cp -f "$GITHUB_WORKSPACE/$FEEDS_CONF" "$GITHUB_WORKSPACE/openwrt/feeds.conf.default"
         else
           echo "$FEEDS_CONF not found, skip custom feeds copy"
         fi
 
-        chmod +x $DIY_P1_SH
-        bash $GITHUB_WORKSPACE/$DIY_P1_SH
+        # 执行 DIY 脚本
+        if [ -f "$GITHUB_WORKSPACE/$DIY_P1_SH" ]; then
+          chmod +x "$GITHUB_WORKSPACE/$DIY_P1_SH"
+          bash "$GITHUB_WORKSPACE/$DIY_P1_SH"
+        else
+          echo "$DIY_P1_SH not found, skip"
+        fi
 
     - name: Update feeds
-      run: cd openwrt && ./scripts/feeds update -a
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a || echo "Update feeds failed, continue"
 
     - name: Install feeds
-      run: cd openwrt && ./scripts/feeds install -a
+      run: |
+        cd openwrt
+        ./scripts/feeds install -a || echo "Install feeds failed, continue"
 
     - name: Load custom configuration
       run: |
         [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        chmod +x $DIY_P2_SH
-        bash $GITHUB_WORKSPACE/$DIY_P2_SH
+        if [ -f "$GITHUB_WORKSPACE/$DIY_P2_SH" ]; then
+          chmod +x "$GITHUB_WORKSPACE/$DIY_P2_SH"
+          bash "$GITHUB_WORKSPACE/$DIY_P2_SH"
+        else
+          echo "$DIY_P2_SH not found, skip"
+        fi
 
     - name: Download package
       id: package
@@ -127,9 +135,13 @@ jobs:
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
-        cd openwrt/bin/targets/*/*
-        rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        if [ -d "openwrt/bin/targets" ]; then
+          cd openwrt/bin/targets/*/* || exit 0
+          rm -rf packages
+          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        else
+          echo "No firmware generated, skip organize"
+        fi
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware directory

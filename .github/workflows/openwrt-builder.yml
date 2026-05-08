@@ -1,7 +1,7 @@
 #
 # https://github.com/P3TERX/Actions-OpenWrt
 #
-# File: .github/workflows/openwrt-bulder.yml
+# File: .github/workflows/openwrt-builder.yml
 # Description: Build OpenWrt using GitHub Actions
 #
 # Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
@@ -62,10 +62,21 @@ jobs:
 
     - name: Load custom feeds
       run: |
-        [ -f openwrt/feeds.conf.default ] && cp openwrt/feeds.conf.default openwrt/feeds.conf.bak
-        cp -f $FEEDS_CONF openwrt/feeds.conf.default
+        # 备份默认 feeds.conf.default
+        if [ -f $GITHUB_WORKSPACE/openwrt/feeds.conf.default ]; then
+          cp $GITHUB_WORKSPACE/openwrt/feeds.conf.default $GITHUB_WORKSPACE/openwrt/feeds.conf.bak
+        else
+          echo "feeds.conf.default not found, skip backup"
+        fi
+
+        # 复制自定义 feeds
+        if [ -f $GITHUB_WORKSPACE/$FEEDS_CONF ]; then
+          cp -f $GITHUB_WORKSPACE/$FEEDS_CONF $GITHUB_WORKSPACE/openwrt/feeds.conf.default
+        else
+          echo "$FEEDS_CONF not found, skip custom feeds copy"
+        fi
+
         chmod +x $DIY_P1_SH
-       
         bash $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: Update feeds
@@ -79,7 +90,6 @@ jobs:
         [ -e files ] && mv files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
-        
         bash $GITHUB_WORKSPACE/$DIY_P2_SH
 
     - name: Download package
@@ -146,7 +156,9 @@ jobs:
       with:
         tag_name: ${{ steps.tag.outputs.release_tag }}
         body_path: release.txt
-        files: ${{ env.FIRMWARE }}/*
+        files: |
+          ${{ env.FIRMWARE }}/*.bin
+          ${{ env.FIRMWARE }}/*.img
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@main

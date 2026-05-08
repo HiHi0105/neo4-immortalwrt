@@ -51,7 +51,6 @@ jobs:
     - name: Clone source code
       working-directory: /workdir
       run: |
-        df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
@@ -141,6 +140,7 @@ jobs:
           echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         else
           echo "No firmware generated, skip organize"
+          echo "FIRMWARE=" >> $GITHUB_ENV
         fi
         echo "status=success" >> $GITHUB_OUTPUT
 
@@ -149,7 +149,7 @@ jobs:
       if: steps.organize.outputs.status == 'success' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+        path: ${{ env.FIRMWARE || '' }}
 
     - name: Generate release tag
       id: tag
